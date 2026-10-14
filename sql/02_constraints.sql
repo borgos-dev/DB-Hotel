@@ -13,8 +13,10 @@
 --          after check-out
 --
 -- Concurrency: the triggers take a row lock (SELECT ... FOR UPDATE) on the
--- room / service being booked, so two sessions cannot both pass the check
--- for the same room (or slot) and then both insert.
+-- room / service being booked, then read the competing bookings with a
+-- locking read (FOR SHARE), which sees the latest COMMITTED data. Two sessions
+-- therefore cannot both pass the check for the same room (or slot) and then
+-- both insert. (Verified with two concurrent sessions, see README.)
 --
 -- All violations raise SQLSTATE '45000' with a message starting with the
 -- business-rule identifier (e.g. 'BR-07: ...').
@@ -78,7 +80,8 @@ BEGIN
        AND r.status <> 'cancelled'
        AND r.check_in_date  < p_check_out
        AND r.check_out_date > p_check_in
-     LIMIT 1;
+     LIMIT 1
+       FOR SHARE;   -- locking read: sees the latest COMMITTED data, not the transaction snapshot
 
     IF v_other IS NOT NULL THEN
         SET v_msg = CONCAT('BR-07: room ', v_number,
@@ -200,7 +203,8 @@ BEGIN
                AND r.status <> 'cancelled'
                AND r.check_in_date  < NEW.check_out_date
                AND r.check_out_date > NEW.check_in_date
-             LIMIT 1;
+             LIMIT 1
+               FOR SHARE;
 
             IF v_other IS NOT NULL THEN
                 SET v_msg = CONCAT('BR-07: room ', v_room,
@@ -244,6 +248,20 @@ BEGIN
     DECLARE v_found     INT DEFAULT 0;
     DECLARE v_cap       INT DEFAULT 0;
     DECLARE v_msg       VARCHAR(128);
+    DECLARE v_done      INT DEFAULT 0;
+    DECLARE v_room_id   SMALLINT UNSIGNED;
+    DECLARE v_price     DECIMAL(10,2);
+
+    -- The rooms are read through a cursor and inserted one by one: an
+    -- INSERT ... SELECT FROM room would be rejected (error 1442) because the
+    -- BR-07 trigger locks the room row it is booking (FOR UPDATE).
+    DECLARE cur_rooms CURSOR FOR
+        SELECT ro.room_id, ro.base_price
+          FROM room ro
+         WHERE ro.room_id IN (SELECT jt.room_id
+                                FROM JSON_TABLE(p_room_ids, '$[*]' COLUMNS (room_id INT PATH '$')) jt)
+         ORDER BY ro.room_id;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_done = 1;
 
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -278,11 +296,18 @@ BEGIN
     VALUES (p_client_id, p_check_in, p_check_out, p_guests, 'pending');
     SET p_reservation_id = LAST_INSERT_ID();
 
-    INSERT INTO reservation_room (reservation_id, room_id, nightly_price)
-    SELECT p_reservation_id, ro.room_id, ro.base_price            -- BR-08 snapshot
-      FROM room ro
-     WHERE ro.room_id IN (SELECT jt.room_id
-                            FROM JSON_TABLE(p_room_ids, '$[*]' COLUMNS (room_id INT PATH '$')) jt);
+    SET v_done = 0;
+    OPEN cur_rooms;
+    room_loop: LOOP
+        FETCH cur_rooms INTO v_room_id, v_price;
+        IF v_done = 1 THEN
+            LEAVE room_loop;
+        END IF;
+        -- BR-08: price snapshot; the BR-07 trigger fires on every line
+        INSERT INTO reservation_room (reservation_id, room_id, nightly_price)
+        VALUES (p_reservation_id, v_room_id, v_price);
+    END LOOP;
+    CLOSE cur_rooms;
 
     COMMIT;
 END$$
@@ -374,7 +399,8 @@ sp_body: BEGIN
      WHERE service_id = p_service_id
        AND slot_start = p_slot_start
        AND status = 'booked'
-       AND (p_booking_id IS NULL OR service_booking_id <> p_booking_id);
+       AND (p_booking_id IS NULL OR service_booking_id <> p_booking_id)
+       FOR SHARE;   -- latest committed bookings (see sp_assert_room_free)
 
     IF v_used + p_participants > v_capacity THEN
         SET v_msg = CONCAT('BR-12: slot capacity exceeded (', v_used, ' of ',
