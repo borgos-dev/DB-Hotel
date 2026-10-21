@@ -13,6 +13,7 @@ hotel-db/
 ├── docs/
 │   ├── erd.png            conceptual model (crow's foot), rendered from erd.dot
 │   ├── erd.dot            Graphviz source of the diagram
+│   ├── DB--Hotel.png      additional database diagram
 │   └── data_dictionary.md every attribute: type, constraints, description, originating rule
 └── sql/
     ├── 01_schema.sql      L3  tables, PK/FK (ON DELETE/UPDATE), UNIQUE, NOT NULL, CHECK, ENUM/lookups, views
@@ -54,6 +55,10 @@ Currency is XAF (FCFA); VAT at 19.25 % is applied in the test data.
 ### Conceptual model (L2)
 
 ![ERD](docs/erd.png)
+
+Additional database diagram:
+
+![Database diagram](docs/DB--Hotel.png)
 
 Structural choices
 
@@ -135,4 +140,4 @@ Each query documents its assumptions in comments.
 ## Submission checklist
 - [ ] repository public (or shared with the examiner), at least 5 commits (see `git log`)
 - [ ] scripts 01 → 05 run without error on an empty database
-- [ ] email the link to e.njifanda@commonfactor.tech, subject `[DB-Hotel] SURNAME First name`
+- [ ] email the link to e.njifanda@commonfactor.tech, subject `[DB-Hotel] SURNAME Akiy Humphery`
