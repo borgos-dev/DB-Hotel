@@ -12,7 +12,6 @@ hotel-db/
 ├── README.md              this file: context, design choices, execution order
 ├── docs/
 │   ├── erd.png            conceptual model (crow's foot), rendered from erd.dot
-│   ├── erd.dot            Graphviz source of the diagram
 │   ├── DB--Hotel.png      additional database diagram
 │   └── data_dictionary.md every attribute: type, constraints, description, originating rule
 └── sql/
@@ -36,13 +35,6 @@ mysql -u root -p -t < sql/04_queries.sql    # -t draws result tables
 mysql -u root -p -t < sql/05_tests.sql      # prints PASS / FAIL for every violation attempt
 ```
 
-Every script starts with `USE hotel_db;`, so each can also be run on its own once 01 has been run.
-Scripts 01-05 run **without any error**: the violation attempts of script 05 are executed through a
-helper procedure that catches the expected error and logs it, so the script is never aborted.
-Expected final output of 05: `PASS = 62` and four audit checks at `PASS`.
-
-> Privileges: creating triggers and functions on a server with binary logging enabled needs either the
-> SUPER privilege or `log_bin_trust_function_creators = 1` (not an issue for `root` on a local server).
 
 ## Design choices
 
