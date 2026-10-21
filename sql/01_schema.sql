@@ -5,18 +5,6 @@
 -- CHECK constraints, ENUMs / lookup tables and two read-only views.
 -- Cross-table rules that MySQL cannot declare (BR-05 capacity, BR-07, BR-12,
 -- BR-15, BR-16, BR-17) are enforced in 02_constraints.sql.
---
--- Conventions
---   * Money: DECIMAL, never FLOAT (BR-15). Currency: XAF (FCFA).
---   * Surrogate integer keys everywhere, so ON UPDATE CASCADE is a harmless
---     safety net (a key should never change); ON DELETE is chosen per link
---     and justified next to each foreign key.
---   * Lookup table when the list is open-ended or carries attributes
---     (room_type, amenity); ENUM when the list is a small closed set fixed
---     by a business rule (statuses, payment methods).
---   * CHECK / FK constraint names are schema-wide in MySQL, so every name is
---     prefixed with its table.
--- Re-runnable: drops and recreates the hotel_db database.
 -- =====================================================================
 
 DROP DATABASE IF EXISTS hotel_db;
