@@ -3,7 +3,7 @@
 Individual project: design and implementation of a hotel database covering rooms, clients,
 reservations, services, invoicing, payments and reviews (business rules BR-01 to BR-17).
 
-**Author:** SURNAME First name &nbsp;|&nbsp; **Course:** Databases &nbsp;|&nbsp; **Engine:** MySQL 8.0, InnoDB
+**Author:** SURNAME Akiy Humphery &nbsp;|&nbsp; **Course:** Databases &nbsp;|&nbsp; **Engine:** MySQL 8.0, InnoDB
 
 ## Repository content
 
